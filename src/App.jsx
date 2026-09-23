@@ -4,20 +4,11 @@ import {
 } from 'firebase/firestore';
 import { 
   Search, Plus, Edit2, Calculator, LogOut, Package, Image as ImageIcon, 
-  ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, Upload, X 
+  ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, X 
 } from 'lucide-react';
-import { db } from './firebase'; // <-- Mengambil koneksi database dari file firebase.js Anda
+import { db } from './firebase';
 
 const appId = 'seller-dashboard-app';
-
-const convertFileToBase64 = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = (error) => reject(error);
-  });
-};
 
 const formatPrice = (price) => {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(price || 0);
@@ -72,7 +63,7 @@ const HomeView = ({ products }) => {
   const displayedProducts = filteredAndSorted.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8 relative">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <h2 className="text-2xl font-black text-slate-800">Daftar Produk</h2>
         
@@ -97,20 +88,13 @@ const HomeView = ({ products }) => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {displayedProducts.map(product => (
-          <div key={product.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-lg transition duration-300 flex flex-col group">
-            <div className="h-48 bg-slate-50 relative overflow-hidden flex items-center justify-center">
-              {product.imageUrl ? (
-                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
-              ) : (
-                <ImageIcon className="text-slate-300 h-16 w-16" />
-              )}
-            </div>
-            <div className="p-5 flex flex-col flex-grow">
-              <h3 className="font-bold text-lg text-slate-800 mb-1 line-clamp-1">{product.name}</h3>
-              <p className="text-indigo-600 font-black text-lg mb-2">{formatPrice(product.price)}</p>
+          <div key={product.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-lg transition duration-300 flex flex-col group min-h-[160px]">
+            <div className="p-5 flex flex-col items-center justify-center flex-grow text-center">
+              <h3 className="font-bold text-lg text-slate-800 mb-1 line-clamp-2">{product.name}</h3>
+              <p className="text-indigo-600 font-black text-xl mb-2">{formatPrice(product.price)}</p>
               {product.altPrice > 0 && (
-                <p className="text-sm text-slate-500 font-medium mt-auto bg-slate-50 p-2 rounded-lg border border-slate-100">
-                  Info Tambahan: <span className="font-bold text-slate-700">{formatPrice(product.altPrice)}</span>
+                <p className="text-sm text-slate-500 font-medium mt-auto bg-slate-50 p-2 rounded-lg border border-slate-100 w-full">
+                  Info Tambahan: <br/><span className="font-bold text-slate-700">{formatPrice(product.altPrice)}</span>
                 </p>
               )}
             </div>
@@ -165,21 +149,10 @@ const AddProductView = ({ appUser, showModal, setView }) => {
     const price = Number(formData.get('price'));
     const altPriceRaw = formData.get('altPrice');
     const altPrice = altPriceRaw ? Number(altPriceRaw) : 0;
-    
-    let imageUrl = '';
-    const imageFile = formData.get('imageFile');
-    if (imageFile && imageFile.size > 0) {
-      try {
-        imageUrl = await convertFileToBase64(imageFile);
-      } catch (err) {
-        showModal('error', 'Gagal memproses gambar.');
-        return;
-      }
-    }
 
     try {
       const productsRef = collection(db, 'artifacts', appId, 'public', 'data', `seller_products_${appUser.username}`);
-      await addDoc(productsRef, { name, price, altPrice, imageUrl, createdAt: Date.now() });
+      await addDoc(productsRef, { name, price, altPrice, createdAt: Date.now() });
       e.target.reset();
       showModal('success', 'Berhasil menambahkan produk baru!', 'OK', () => { setView('home'); });
     } catch (err) {
@@ -215,18 +188,6 @@ const AddProductView = ({ appUser, showModal, setView }) => {
               <label className="block text-sm font-bold text-slate-700 mb-2">Info Tambahan / Harga Satuan (Rp)</label>
               <input name="altPrice" type="number" min="0" placeholder="Opsional (misal harga ecer: 140000)" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-bold text-slate-700 mb-2">Gambar Produk (Opsional)</label>
-              <div className="flex items-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-6 h-6 mb-2 text-slate-400" />
-                    <p className="text-sm text-slate-500 font-medium">Klik untuk upload gambar dari perangkat</p>
-                  </div>
-                  <input type="file" name="imageFile" accept="image/*" className="hidden" />
-                </label>
-              </div>
-            </div>
           </div>
           <div className="pt-4 border-t border-slate-100">
             <button type="submit" className="w-full md:w-auto px-8 py-3.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition">
@@ -256,20 +217,9 @@ const EditProductView = ({ appUser, products, showModal }) => {
     const altPriceRaw = formData.get('altPrice');
     const altPrice = altPriceRaw ? Number(altPriceRaw) : 0;
     
-    let imageUrl = editModal.product.imageUrl || '';
-    const imageFile = formData.get('imageFile');
-    if (imageFile && imageFile.size > 0) {
-      try {
-        imageUrl = await convertFileToBase64(imageFile);
-      } catch (err) {
-        showModal('error', 'Gagal memproses gambar.');
-        return;
-      }
-    }
-
     try {
       const productRef = doc(db, 'artifacts', appId, 'public', 'data', `seller_products_${appUser.username}`, editModal.product.id);
-      await updateDoc(productRef, { name, price, altPrice, imageUrl });
+      await updateDoc(productRef, { name, price, altPrice });
       setEditModal({ show: false, product: null });
       showModal('success', 'Produk berhasil diubah!');
     } catch (err) {
@@ -312,14 +262,7 @@ const EditProductView = ({ appUser, products, showModal }) => {
               {filtered.map(product => (
                 <tr key={product.id} className="hover:bg-slate-50 transition">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="h-12 w-12 flex-shrink-0 bg-slate-100 rounded-lg overflow-hidden flex items-center justify-center border border-slate-200">
-                        {product.imageUrl ? <img src={product.imageUrl} alt="" className="h-full w-full object-cover" /> : <ImageIcon size={20} className="text-slate-400" />}
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-bold text-slate-900">{product.name}</div>
-                      </div>
-                    </div>
+                    <div className="text-sm font-bold text-slate-900">{product.name}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-indigo-600">
                     {formatPrice(product.price)}
@@ -367,16 +310,6 @@ const EditProductView = ({ appUser, products, showModal }) => {
                     <label className="block text-sm font-bold text-slate-700 mb-1">Info Tambahan</label>
                     <input name="altPrice" defaultValue={editModal.product.altPrice || ''} type="number" min="0" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                   </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Ubah Gambar (Kosongkan jika tidak diubah)</label>
-                  <input type="file" name="imageFile" accept="image/*" className="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition" />
-                  {editModal.product.imageUrl && (
-                    <div className="mt-3">
-                      <p className="text-xs font-bold text-slate-500 mb-1">Gambar saat ini:</p>
-                      <img src={editModal.product.imageUrl} alt="current" className="h-16 w-16 object-cover rounded-lg border border-slate-200 shadow-sm" />
-                    </div>
-                  )}
                 </div>
               </form>
             </div>
@@ -468,7 +401,7 @@ const CalculatorView = ({ products }) => {
             <div className="flex-1 flex flex-col bg-slate-50 p-5 rounded-2xl border border-slate-200">
               <div className="flex items-start gap-4 mb-6 pb-6 border-b border-slate-200">
                 <div className="h-16 w-16 bg-white rounded-xl border border-slate-200 flex items-center justify-center overflow-hidden">
-                  {selectedProd.imageUrl ? <img src={selectedProd.imageUrl} alt="" className="h-full w-full object-cover"/> : <Package className="text-slate-400"/>}
+                  <Package className="text-slate-400"/>
                 </div>
                 <div>
                   <h3 className="text-lg font-black text-slate-800">{selectedProd.name}</h3>
@@ -650,6 +583,37 @@ export default function App() {
     }
   };
 
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    const username = e.target.username.value.trim().toLowerCase();
+    const oldPassword = e.target.oldPassword.value;
+    const newPassword = e.target.newPassword.value;
+    
+    try {
+      const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'seller_users', username);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        showModal('error', 'Username tidak ditemukan.');
+        return;
+      }
+
+      if (userSnap.data().password !== oldPassword) {
+        showModal('error', 'Password lama salah!');
+        return;
+      }
+
+      await updateDoc(userRef, { password: newPassword });
+      showModal('success', 'Berhasil mengubah password!', 'Back to Login', () => {
+        setView('login');
+        closeModal();
+      });
+    } catch (err) {
+      console.error(err);
+      showModal('error', 'Terjadi kesalahan saat mengubah password.');
+    }
+  };
+
   const handleLogout = () => {
     setAppUser(null);
     setView('login');
@@ -687,11 +651,13 @@ export default function App() {
             </div>
             <h1 className="text-3xl font-bold text-slate-800 mb-2">Toko Kevin</h1>
             <p className="text-slate-500 font-medium">
-              {view === 'login' ? 'Masuk ke dashboard toko Anda.' : 'Buat akun seller baru Anda.'}
+              {view === 'login' && 'Masuk ke dashboard toko Anda.'}
+              {view === 'register' && 'Buat akun seller baru Anda.'}
+              {view === 'change-password' && 'Ubah password akun Anda.'}
             </p>
           </div>
           
-          {view === 'login' ? (
+          {view === 'login' && (
             <form className="space-y-5" onSubmit={handleLogin}>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Username</label>
@@ -701,16 +667,21 @@ export default function App() {
                 <label className="block text-sm font-bold text-slate-700 mb-1">Password</label>
                 <input required name="password" type="password" placeholder="Masukkan password" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" />
               </div>
-              <div className="pt-2 space-y-3">
+              <div className="pt-2 flex flex-col gap-2">
                 <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200">
                   Login Masuk
                 </button>
                 <button type="button" onClick={() => setView('register')} className="w-full text-indigo-600 font-bold py-2 hover:underline transition">
                   Belum punya akun? Daftar
                 </button>
+                <button type="button" onClick={() => setView('change-password')} className="w-full text-slate-500 font-bold py-2 hover:text-slate-800 transition">
+                  Ubah Password
+                </button>
               </div>
             </form>
-          ) : (
+          )}
+
+          {view === 'register' && (
             <form className="space-y-5" onSubmit={handleRegister}>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Buat Username Baru</label>
@@ -723,6 +694,31 @@ export default function App() {
               <div className="pt-2 space-y-3">
                 <button type="submit" className="w-full bg-slate-800 text-white font-bold py-3.5 rounded-xl hover:bg-slate-900 transition shadow-lg shadow-slate-200">
                   Daftar Sekarang
+                </button>
+                <button type="button" onClick={() => setView('login')} className="w-full text-slate-500 font-bold py-2 hover:text-slate-800 transition">
+                  Kembali ke Login
+                </button>
+              </div>
+            </form>
+          )}
+
+          {view === 'change-password' && (
+            <form className="space-y-5" onSubmit={handleChangePassword}>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Username</label>
+                <input required name="username" type="text" placeholder="Masukkan username" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Password Lama</label>
+                <input required name="oldPassword" type="password" placeholder="Masukkan password lama" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Password Baru</label>
+                <input required name="newPassword" type="password" placeholder="Masukkan password baru" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" />
+              </div>
+              <div className="pt-2 space-y-3">
+                <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200">
+                  Simpan Password
                 </button>
                 <button type="button" onClick={() => setView('login')} className="w-full text-slate-500 font-bold py-2 hover:text-slate-800 transition">
                   Kembali ke Login
